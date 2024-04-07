@@ -27,12 +27,12 @@ type Counter interface {
 	GetFirstNWords(n int) []pair
 }
 type counter struct {
-	sync.RWMutex
-	counter   int
 	words     sync.Map
+	file      string
+	counter   int
 	chunkSize int
 	mode      Mode
-	file      string
+	sync.RWMutex
 }
 
 // NewCounter returns a Counter object with initialized chunk size to 2048 and in mode COUNT words
@@ -136,12 +136,15 @@ func (c *counter) ProcessFile(fileName string) {
 		}
 
 		bytes, err := r.ReadBytes('\n') // read entire line
+		if err != nil {
+			fmt.Println(err)
+		}
 		if len(bytes) > 0 {
 			*chunk = append(*chunk, bytes...)
 		}
 
 		// Print the chunk
-		//fmt.Printf("%s", chunk)
+		// fmt.Printf("%s", chunk)
 		wg.Add(1)
 		go func(chunk *[]byte) {
 			defer func() {
@@ -149,7 +152,6 @@ func (c *counter) ProcessFile(fileName string) {
 				chunkPool.Put(chunk)
 			}()
 			c.ProcessChunk(chunk)
-
 		}(chunk)
 	}
 	wg.Wait()
